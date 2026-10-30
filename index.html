@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ছবির সাইজ কমান</title>
+<meta name="description" content="ছবির সাইজ নির্দিষ্ট KB-তে কমান। চাকরির আবেদন ও ফর্মের জন্য। ছবি ফোন থেকে বের হয় না।">
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f2f6f3;--card:#fff;--ink:#14231c;--mut:#5c6f65;--line:#d3ded7;--g:#006a4e;--gt:#fff;--red:#f42a41;--ok:#0a7a4f;--err:#b3261e;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1713;--card:#16231d;--ink:#e8f1ec;--mut:#98ada2;--line:#2a3d34;--g:#3fbf94;--gt:#06231a;--ok:#5fd6a6;--err:#ff8a80}}
+:root[data-theme="dark"]{--bg:#0e1713;--card:#16231d;--ink:#e8f1ec;--mut:#98ada2;--line:#2a3d34;--g:#3fbf94;--gt:#06231a;--ok:#5fd6a6;--err:#ff8a80}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hind Siliguri","Noto Sans Bengali",system-ui,sans-serif;line-height:1.6}
+main{max-width:560px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.7rem;margin:0 0 4px;display:flex;align-items:center;gap:10px}
+h1::before{content:"";width:14px;height:14px;border-radius:50%;background:var(--red);flex:none}
+.sub{color:var(--mut);margin:0 0 20px}
+.drop{display:block;border:2px dashed var(--g);border-radius:14px;padding:28px 16px;text-align:center;cursor:pointer;background:var(--card)}
+.drop:focus-within,button:focus-visible{outline:3px solid var(--g);outline-offset:2px}
+.drop b{display:block;font-size:1.1rem}
+.drop span{color:var(--mut);font-size:.9rem}
+input[type=file]{position:absolute;opacity:0;width:1px;height:1px}
+h2{font-size:1rem;margin:22px 0 8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;border:1.5px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--g);color:var(--gt);border-color:var(--g)}
+.custom{display:flex;align-items:center;gap:8px;margin-top:10px}
+.custom input{font:inherit;width:100px;padding:8px 10px;border:1.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+.item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px;display:flex;gap:12px;align-items:center}
+.item img{width:64px;height:64px;object-fit:cover;border-radius:8px;flex:none;background:var(--line)}
+.info{flex:1;min-width:0}
+.name{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sz{color:var(--mut);font-size:.92rem}
+.ok{color:var(--ok)}.err{color:var(--err)}
+.save{font:inherit;font-weight:500;background:var(--g);color:var(--gt);border:0;border-radius:8px;padding:8px 14px;cursor:pointer;flex:none}
+.note{color:var(--mut);font-size:.85rem;margin-top:24px}
+</style>
+</head>
+<body>
+<main>
+<h1>ছবির সাইজ কমান</h1>
+<p class="sub">চাকরির আবেদন বা ফর্মের জন্য ছবি ঠিক যত KB লাগে, তত KB-তে নামিয়ে আনুন। ছবি আপনার ফোন থেকে বের হয় না।</p>
+
+<label class="drop">
+<input type="file" id="f" accept="image/*" multiple>
+<b>ছবি বেছে নিন</b>
+<span>একসাথে একাধিক ছবিও দিতে পারেন</span>
+</label>
+
+<h2>কত KB-তে চান?</h2>
+<div class="chips" id="chips"></div>
+<div class="custom">
+<label for="kb">নিজে লিখুন:</label>
+<input id="kb" type="number" min="5" max="5000" placeholder="যেমন 150" inputmode="numeric">
+<span>KB</span>
+</div>
+
+<div id="list" aria-live="polite"></div>
+<p class="note">ফলাফল JPG ফাইল হবে। ছবির মান যতটা সম্ভব ভালো রেখে সাইজ কমানো হয়; খুব ছোট টার্গেটে ছবির মাপও (পিক্সেল) কমতে পারে।</p>
+</main>
+<script>
+var PRESETS=[["ছবি (১০০KB)",100],["সই (৬০KB)",60],["৫০KB",50],["২০০KB",200],["৫০০KB",500]];
+var target=100*1024,items=[];
+var chips=document.getElementById("chips"),kb=document.getElementById("kb"),list=document.getElementById("list");
+function bn(n){return String(n).replace(/\d/g,function(d){return "০১২৩৪৫৬৭৮৯"[d]})}
+function fmt(b){return b<1048576?bn(Math.round(b/1024))+" KB":bn((b/1048576).toFixed(1))+" MB"}
+function drawChips(){chips.innerHTML="";PRESETS.forEach(function(p){
+var b=document.createElement("button");b.className="chip";b.textContent=p[0];
+b.setAttribute("aria-pressed",String(target===p[1]*1024&&!kb.value));
+b.onclick=function(){kb.value="";target=p[1]*1024;drawChips();rerun()};chips.appendChild(b)})}
+kb.oninput=function(){var v=parseInt(kb.value,10);if(v>=5){target=v*1024;drawChips();rerun()}};
+function load(file){return new Promise(function(res,rej){var u=URL.createObjectURL(file),i=new Image();
+i.onload=function(){res({img:i,url:u})};i.onerror=function(){rej()};i.src=u})}
+function toBlob(c,q){return new Promise(function(r){c.toBlob(r,"image/jpeg",q)})}
+async function squeeze(img,max){
+var scale=1,best=null;
+for(var s=0;s<14;s++){
+var w=Math.max(1,Math.round(img.naturalWidth*scale)),h=Math.max(1,Math.round(img.naturalHeight*scale));
+var c=document.createElement("canvas");c.width=w;c.height=h;var x=c.getContext("2d");
+x.fillStyle="#fff";x.fillRect(0,0,w,h);x.drawImage(img,0,0,w,h);
+var lo=0.2,hi=0.95,found=null,small=await toBlob(c,lo);
+if(small&&small.size<=max){found=small;
+for(var k=0;k<6;k++){var m=(lo+hi)/2,bl=await toBlob(c,m);if(bl.size<=max){found=bl;lo=m}else hi=m}
+return{blob:found,w:w,h:h}}
+best={blob:small,w:w,h:h};scale*=0.85}
+return best}
+async function process(it){
+it.state="work";render();
+try{
+var L=await load(it.file);it.thumb=L.url;
+if(it.file.size<=target&&/jpe?g/i.test(it.file.type)){it.out=it.file;it.same=true}
+else{var r=await squeeze(L.img,target);it.out=r.blob;it.dim=bn(r.w)+"×"+bn(r.h)}
+it.state=it.out.size<=target?"done":"big"
+}catch(e){it.state="fail"}
+render()}
+function rerun(){items.forEach(function(it){it.same=false;process(it)})}
+document.getElementById("f").onchange=function(e){
+Array.prototype.forEach.call(e.target.files,function(f){var it={file:f,state:"work"};items.push(it);process(it)});e.target.value=""};
+function save(it){
+var name=it.file.name.replace(/\.[^.]+$/,"")+"-small.jpg";
+var u=URL.createObjectURL(it.out),a=document.createElement("a");
+a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+setTimeout(function(){URL.revokeObjectURL(u)},5000)}
+function render(){list.innerHTML="";items.forEach(function(it){
+var d=document.createElement("div");d.className="item";
+var im=document.createElement("img");if(it.thumb)im.src=it.thumb;im.alt="";d.appendChild(im);
+var inf=document.createElement("div");inf.className="info";
+var n=document.createElement("div");n.className="name";n.textContent=it.file.name;inf.appendChild(n);
+var s=document.createElement("div");s.className="sz";
+if(it.state==="work")s.textContent="কাজ চলছে…";
+else if(it.state==="fail"){s.textContent="ছবিটি খোলা যায়নি। JPG বা PNG দিন।";s.className+=" err"}
+else{var t=fmt(it.file.size)+" → "+fmt(it.out.size)+(it.dim&&!it.same?" ("+it.dim+")":"");
+if(it.same)t+=" (আগে থেকেই ছোট)";
+if(it.state==="big"){t+=". এর নিচে নামানো গেল না, বড় টার্গেট দিন।";s.className+=" err"}else s.className+=" ok";
+s.textContent=t}
+inf.appendChild(s);d.appendChild(inf);
+if(it.out){var b=document.createElement("button");b.className="save";b.textContent="সেভ করুন";b.onclick=function(){save(it)};d.appendChild(b)}
+list.appendChild(d)})}
+drawChips();
+</script>
+</body>
+</html>
